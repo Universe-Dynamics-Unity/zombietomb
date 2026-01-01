@@ -85,7 +85,7 @@ function loop() {
                 if (map[player.tileY][player.tileX] === 2) {
                     if (modoActual === 'historia') {
                         if(!nivelesCompletados.includes(currentLevelPlaying)) nivelesCompletados.push(currentLevelPlaying);
-                        guardarProgreso(); alert("¡Nivel Superado!"); mostrarSelector(true);
+                        guardarProgreso(); alert("Nivel Superado!"); mostrarSelector(true);
                     } else { alert("Fin Arcade"); regresarAlMenu(); }
                 }
             }
@@ -113,53 +113,70 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// === LÓGICA DE MOVIMIENTO UNIFICADA ===
-function intentarMover(dir) {
+// --- VARIABLES PARA EL CONTROL HIBRIDO ---
+let touchStartX = 0;
+let touchStartY = 0;
+
+// Función que procesa la dirección del movimiento
+function procesarDireccion(dir) {
     if (player.moving || loading || map.length === 0) return;
+    
     let dx = 0, dy = 0;
-    if (dir === "up") dy = -1; if (dir === "down") dy = 1;
-    if (dir === "left") dx = -1; if (dir === "right") dx = 1;
+    if (dir === "UP") dy = -1;
+    if (dir === "DOWN") dy = 1;
+    if (dir === "LEFT") dx = -1;
+    if (dir === "RIGHT") dx = 1;
 
-    let nx = player.tileX, ny = player.tileY;
-    if (skinColor === "fantasma") {
-        if (map[ny + dy]?.[nx + dx] === 1) {
-            if (map[ny + dy*2]?.[nx + dx*2] !== 1 && map[ny+dy*2]) { nx += dx*2; ny += dy*2; }
-        } else { while (map[ny + dy]?.[nx + dx] !== 1) { nx += dx; ny += dy; if(!map[ny+dy]) break; } }
-    } else { while (map[ny + dy]?.[nx + dx] !== 1) { nx += dx; ny += dy; if(!map[ny+dy]) break; } }
-
-    if (nx !== player.tileX || ny !== player.tileY) { 
-        player.tileX = nx; player.tileY = ny; 
-        player.targetX = nx*gridSize; player.targetY = ny*gridSize; 
-        player.moving = true; 
+    if (dx || dy) {
+        let nx = player.tileX, ny = player.tileY;
+        // Lógica de movimiento continuo (estilo Tomb of the Mask)
+        while (map[ny + dy]?.[nx + dx] === 0 || map[ny + dy]?.[nx + dx] === 4 || map[ny + dy]?.[nx + dx] === 2) {
+            nx += dx;
+            ny += dy;
+            // Si llega a la meta o algo especial, se detiene
+            if (map[ny][nx] === 2) break; 
+        }
+        
+        if (nx !== player.tileX || ny !== player.tileY) {
+            player.tileX = nx;
+            player.tileY = ny;
+            player.targetX = nx * gridSize;
+            player.targetY = ny * gridSize;
+            player.moving = true;
+        }
     }
 }
 
-// Control por Teclado (PC)
+// --- DETECCIÓN DE TECLADO (PC) ---
 window.addEventListener("keydown", e => {
-    if (e.key === "ArrowUp") intentarMover("up");
-    if (e.key === "ArrowDown") intentarMover("down");
-    if (e.key === "ArrowLeft") intentarMover("left");
-    if (e.key === "ArrowRight") intentarMover("right");
+    if (e.key === "ArrowUp") procesarDireccion("UP");
+    if (e.key === "ArrowDown") procesarDireccion("DOWN");
+    if (e.key === "ArrowLeft") procesarDireccion("LEFT");
+    if (e.key === "ArrowRight") procesarDireccion("RIGHT");
 });
 
-// Control por Toque / Swipe (Móvil)
-let touchStartX = 0, touchStartY = 0;
-canvas.addEventListener("touchstart", e => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-}, { passive: false });
+// --- DETECCIÓN DE MOUSE Y TOUCH (PC, Tablet, Celular) ---
+const handleStart = (x, y) => { touchStartX = x; touchStartY = y; };
 
-canvas.addEventListener("touchend", e => {
-    let dx = e.changedTouches[0].clientX - touchStartX;
-    let dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 30) intentarMover("right");
-        else if (dx < -30) intentarMover("left");
-    } else {
-        if (dy > 30) intentarMover("down");
-        else if (dy < -30) intentarMover("up");
+const handleEnd = (x, y) => {
+    let diffX = x - touchStartX;
+    let diffY = y - touchStartY;
+    
+    // Umbral mínimo para que no se mueva con un simple clic (sensibilidad)
+    if (Math.abs(diffX) > 30 || Math.abs(diffY) > 30) {
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            procesarDireccion(diffX > 0 ? "RIGHT" : "LEFT");
+        } else {
+            procesarDireccion(diffY > 0 ? "DOWN" : "UP");
+        }
     }
-}, { passive: false });
+};
 
-actualizarInterfaz();
+// Eventos de Mouse
+canvas.addEventListener("mousedown", e => handleStart(e.clientX, e.clientY));
+canvas.addEventListener("mouseup", e => handleEnd(e.clientX, e.clientY));
+
+// Eventos de Touch (Celular/Tablet)
+canvas.addEventListener("touchstart", e => handleStart(e.touches[0].clientX, e.touches[0].clientY));
+canvas.addEventListener("touchend", e => handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY));
 loop();

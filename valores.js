@@ -2,7 +2,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 // Ajuste para PC: Ancho (Width) 900 y Alto (Height) 550
-const viewWidth = 360, viewHeight = 600;
+const viewWidth = 900, viewHeight = 550;
 canvas.width = viewWidth; canvas.height = viewHeight;
 
 // === PERSISTENCIA ===
