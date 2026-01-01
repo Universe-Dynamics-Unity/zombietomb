@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Zombie Tomb – Un Laberinto Sin FIn</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="menuPrincipal" class="screen">
+    <h1 style="text-shadow: 0 0 20px var(--neon); font-size: 40px;">ZOMBIE TOMB</h1>
+    <button onclick="mostrarSelector(true)">MODO HISTORIA</button>
+    <button onclick="iniciarJuego('arcade', 0)">MODO ARCADE</button>
+    <button onclick="mostrarTienda(true)">TIENDA</button>
+    <button onclick="mostrarCreditos(true)">CRÉDITOS</button>
+    <button onclick="abrirConfirmacion()" style="border-color: #555; color: #555; font-size: 10px; margin-top: 20px;">BORRAR PROGRESO</button>
+    <div style="margin-top: 20px;">$ <span id="dineroMenu">0</span></div>
+    <div style="margin-top: 20px;">Diamonds <span id="diamantes">0</span></div>
+</div>
+
+<div id="pantallaCreditos" class="screen oculto">
+    <div class="modal-ventana">
+        <h2>CRÉDITOS</h2>
+        <p><strong>DIRECCIÓN Y DISEÑO:</strong><br>Universe Dynamics Unity Games</p>
+        <p><strong>PROGRAMACIÓN Y IA:</strong><br>Gemini (Google) y Alan R.S</p>
+        <p><strong>ARTE VISUAL:</strong><br>Motor de Neón 2025</p>
+        <hr style="border: 0; border-top: 1px solid #333;">
+        <p style="font-size: 10px;">Gracias por jugar a Zombie Tomb.<br>Un proyecto construido paso a paso.</p>
+        <button onclick="mostrarCreditos(false)" style="border-color: var(--blue); color: var(--blue);">CERRAR</button>
+    </div>
+</div>
+
+<div id="modalAlertaContenedor" class="screen oculto" style="background: rgba(0,0,0,0.85); z-index: 200;">
+    <div class="modal-ventana" id="modalAlerta">
+        <h2 style="color: red; text-shadow: 0 0 10px red;">¡ATENCIÓN!</h2>
+        <p>Si borras tu progreso se borrará tu dinero obtenido, puntos y tu avance en los niveles y empezarás desde cero.</p>
+        <button onclick="borrarTodo()" style="border-color: red; color: red;">BORRAR TODO</button>
+        <button onclick="cerrarConfirmacion()">CANCELAR</button>
+    </div>
+</div>
+
+<div id="selectorNiveles" class="screen oculto">
+    <h2>LÍNEA DEL TIEMPO</h2>
+    <div class="timeline" id="timelineList"></div>
+    <button onclick="regresarAlMenu()" style="margin-top: 30px; border-color: red; color: red;">VOLVER AL MENÚ</button>
+</div>
+
+<div id="pantallaTienda" class="screen oculto">
+    <h2>MALL NEÓN</h2>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="cambiarTab('pot', this)">BOOSTERS</button>
+        <button class="tab-btn" onclick="cambiarTab('cos', this)">SKINS</button>
+        <button class="tab-btn" onclick="cambiarTab('bank', this)">DINERO</button>
+    </div>
+   <div id="pot" class="tab-content active">
+    <button onclick="comprarPotenciador('escudo', 50)">ESCUDO ($50)</button>
+    <button onclick="comprarPotenciador('iman', 80)">IMÁN ($80)</button>
+    <button onclick="comprarPotenciador('flash', 120)">FLASH SPEED ($120)</button>
+    <button onclick="comprarPotenciador('vida', 150)">+1 VIDA ($150)</button>
+    <button onclick="comprarSuperVida()" style="border-color: #ff00ff; color: #ff00ff;">SUPER VIDA (15 ♦)</button>
+</div>
+<div id="cos" class="tab-content">
+    <button onclick="comprarSkin('#00ff44', 100)">ESMERALDA ($100)</button>
+    <button onclick="comprarSkin('#ffcc00', 200)">ORO ($200)</button>
+    <button onclick="comprarSkin('arcoiris', 500)">CROMÁTICA ($500)</button>
+    <button onclick="comprarSkinFantasma()" style="border-color: #e0e0e0; color: #e0e0e0;">SKIN FANTASMA (50 ♦)</button>
+</div>
+    <div id="bank" class="tab-content">
+        <button onclick="canjearDinero()">100 PTS -> $10</button>
+        <button onclick="canjearDinero2()">150 PTS -> $20</button>
+        <button onclick="canjearDiamantes()">1000 monedas -> 10 Diamantes</button>
+        <button onclick="canjearDinero1()">20 diamantes -> 2500 monedas</button>
+    </div>
+    <button onclick="mostrarTienda(false)" style="margin-top:10px; color: red;">SALIR</button>
+</div>
+
+<div class="stats">
+    Lvl: <span id="lvlDisplay">1</span> | HP: <span id="hp">3</span> | Pts: <span id="pts">0</span> | $: <span id="monedas">0</span> | Diamonds: <span id="diamantes">0</span>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script src="valores.js"></script>
+<script src="botonesInferiores.js"></script>
+<script src="tienda.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

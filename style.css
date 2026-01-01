@@ -1,0 +1,54 @@
+ :root { --neon: #00fff7; --magenta: #ff00ff; --blue: #0077ff; }
+    body {
+        margin: 0; background: radial-gradient(circle at top, #050014, #000);
+        color: var(--neon); display: flex; flex-direction: column; align-items: center;
+        font-family: 'Orbitron', sans-serif; overflow: hidden;
+    }
+    .stats {
+        margin: 10px; padding: 10px 25px; border: 2px solid var(--neon);
+        box-shadow: 0 0 15px var(--neon); border-radius: 10px;
+        background: rgba(0,0,0,0.8); z-index: 5;
+    }
+    /* Pantallas */
+    .screen {
+        position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.95); display: flex; flex-direction: column;
+        align-items: center; justify-content: center; z-index: 100;
+    }
+    .oculto { display: none !important; }
+
+    /* Ventana de Créditos y Modales */
+    .modal-ventana {
+        width: 350px; padding: 25px; background: #0a0a0a; border: 3px solid var(--blue);
+        box-shadow: 0 0 40px var(--blue); text-align: center; position: relative;
+    }
+    .modal-ventana h2 { color: var(--blue); text-shadow: 0 0 10px var(--blue); margin-top: 0; }
+    .modal-ventana p { color: white; font-size: 14px; line-height: 1.6; }
+
+    #modalAlerta { border-color: red; box-shadow: 0 0 30px red; }
+
+    .timeline { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; justify-content: center; max-width: 80%; }
+    .lvl-btn {
+        width: 50px; height: 50px; border-radius: 50%; border: 2px solid #333;
+        display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;
+    }
+    .lvl-btn.completado { border-color: var(--neon); color: var(--neon); box-shadow: 0 0 10px var(--neon); background: rgba(0,255,247,0.1); }
+    .lvl-btn.actual { border-color: var(--magenta); color: var(--magenta); box-shadow: 0 0 10px var(--magenta); }
+
+    button {
+        margin: 5px; padding: 10px 20px; background: none; border: 2px solid var(--neon);
+        color: var(--neon); font-family: 'Orbitron'; cursor: pointer; transition: 0.3s;
+    }
+    button:hover { background: var(--neon); color: black; box-shadow: 0 0 15px var(--neon); }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+    .tab-btn { padding: 5px 10px; border: 1px solid var(--neon); color: var(--neon); background: none; font-size: 10px; }
+    .tab-btn.active { background: var(--neon); color: black; }
+    .tab-content { display: none; flex-direction: column; width: 320px; max-height: 400px; overflow-y: auto; }
+    .tab-content.active { display: flex; }
+
+    canvas {
+        max-width: 95%;
+        height: auto;
+        touch-action: none;
+    }
