@@ -1,146 +1,472 @@
-// === CLASES DE ENTIDADES ===
-class Zombie {
-    constructor(x, y) {
-        this.tileX = x; this.tileY = y; this.px = x * gridSize; this.py = y * gridSize;
-        this.targetX = this.px; this.targetY = this.py; this.speed = 3.5; this.wait = 30;
+// ==========================================
+// CONFIGURACIÓN DE UDU STUDIOS - ZOMBIE TOMB
+// ==========================================
+const config = {
+    type: Phaser.AUTO,
+    parent: 'game-container',
+    backgroundColor: '#1a0033', // Color de fondo si la pantalla es más grande
+    scale: {
+        mode: Phaser.Scale.FIT, // Ajusta el juego al contenedor
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 360,  // Resolución base (formato vertical de celular)
+        height: 640
+    },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0 },
+            debug: false // Cambia a true si quieres ver los cuadros de colisión
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
     }
-    update() {
-        const dx = this.targetX - this.px; const dy = this.targetY - this.py;
-        if (dx || dy) {
-            this.px += Math.sign(dx) * Math.min(Math.abs(dx), this.speed);
-            this.py += Math.sign(dy) * Math.min(Math.abs(dy), this.speed);
-        } else {
-            this.wait--;
-            if (this.wait <= 0) {
-                this.wait = 35;
-                const d = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}][Math.floor(Math.random()*4)];
-                let nx = this.tileX, ny = this.tileY;
-                while (map[ny + d.y]?.[nx + d.x] === 0 || map[ny + d.y]?.[nx + d.x] === 8) { nx += d.x; ny += d.y; }
-                this.tileX = nx; this.tileY = ny; this.targetX = nx * gridSize; this.targetY = ny * gridSize;
-            }
-        }
-        if (Math.abs(this.px - player.px) < 25 && Math.abs(this.py - player.py) < 25) {
-            if (tieneEscudo) { 
-                tieneEscudo = false; 
-                zombies = zombies.filter(z => z !== this); 
-            } else { damagePlayer(); }
-        }
-    }
-    draw() { ctx.fillStyle = "#ff0044"; ctx.fillRect(this.px + 8, this.py + 8, 24, 24); }
-}
+};
 
-// === FUNCIONES DE NÚCLEO ===
-async function cargarArchivoJSON(nombre, num) {
-    loading = true;
-    try {
-        const res = await fetch(`niveles/${nombre}.json`);
-        const data = await res.json();
-        map = data.mapa; rows = map.length; cols = map[0].length;
-        gridSize = data.config.gridSize || 40;
-        esDificil = data.dificultad === "hard";
-        zombies = data.zombies ? data.zombies.map(z => new Zombie(z.x, z.y)) : [];
-        for (let y=0; y<rows; y++) for (let x=0; x<cols; x++) {
-            if (map[y][x] === 3) {
-                player.tileX = x; player.tileY = y; player.px = x*gridSize; player.py = y*gridSize;
-                player.targetX = player.px; player.targetY = player.py; map[y][x] = 0;
-            }
-        }
-        document.getElementById("lvlDisplay").innerText = num || "A";
-        loading = false;
-    } catch (e) { loading = false; regresarAlMenu(); }
-}
+let game;
+let currentLevel = 1;
 
-function iniciarJuego(modo, num) {
-    modoActual = modo; currentLevelPlaying = num;
-    document.querySelectorAll('.screen').forEach(s => s.classList.add("oculto"));
-    cargarArchivoJSON(modo === 'arcade' ? 'arcade' : 'nivel' + num, num);
-}
-
-function damagePlayer() {
-    hp--; actualizarInterfaz();
-    if (hp <= 0) { 
-        alert("GAME OVER"); 
-        hp = 3; 
-        map = []; 
-        document.getElementById("menuPrincipal").classList.remove("oculto"); 
-    } else { iniciarJuego(modoActual, currentLevelPlaying); }
-}
-
-function loop() {
-    if (!loading && map.length > 0 && hp > 0) {
-        let finalColor = skinColor === 'arcoiris' ? `hsl(${(Date.now()/10)%360},100%,50%)` : (skinColor === 'fantasma' ? "rgba(255,255,255,0.5)" : skinColor);
-
-        if (player.moving) {
-            const dx = player.targetX - player.px, dy = player.targetY - player.py;
-            player.px += Math.sign(dx) * Math.min(Math.abs(dx), player.speed);
-            player.py += Math.sign(dy) * Math.min(Math.abs(dy), player.speed);
-            let curX = Math.floor((player.px + gridSize/2) / gridSize), curY = Math.floor((player.py + gridSize/2) / gridSize);
-            if (map[curY]?.[curX] === 0) { puntos += 1; map[curY][curX] = 8; guardarProgreso(); }
-            if (dx === 0 && dy === 0) {
-                player.moving = false;
-                if (map[player.tileY][player.tileX] === 2) {
-                    if (modoActual === 'historia') { 
-                        if(!nivelesCompletados.includes(currentLevelPlaying)) nivelesCompletados.push(currentLevelPlaying); 
-                        guardarProgreso(); alert("¡Nivel Superado!"); mostrarSelector(true); 
-                    } else { alert("Fin Arcade"); regresarAlMenu(); }
-                }
-            }
-        }
-
-        zombies.forEach(z => z.update());
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        camX = player.px - viewWidth/2 + gridSize/2; camY = player.py - viewHeight/2 + gridSize/2;
-        ctx.save(); ctx.translate(-camX, -camY);
-        
-        for (let y=0; y<rows; y++) for (let x=0; x<cols; x++) {
-            let t = map[y][x];
-            if (t === 1) { ctx.fillStyle = "#111"; ctx.strokeStyle = "#00fff7"; ctx.fillRect(x*gridSize,y*gridSize,gridSize,gridSize); ctx.strokeRect(x*gridSize,y*gridSize,gridSize,gridSize); }
-            if (t === 0) { ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(x*gridSize+gridSize/2, y*gridSize+gridSize/2, 3, 0, Math.PI*2); ctx.fill(); }
-            if (t === 2) { ctx.fillStyle = "yellow"; ctx.fillRect(x*gridSize+5, y*gridSize+5, gridSize-10, gridSize-10); }
-        }
-        
-        ctx.fillStyle = finalColor; ctx.fillRect(player.px+10, player.py+10, 20, 20);
-        zombies.forEach(z => z.draw());
-        ctx.restore();
-    }
-    requestAnimationFrame(loop);
-}
-
-function intentarMover(dir) {
-    if (player.moving || loading || map.length === 0) return;
-    let dx = 0, dy = 0;
-    if (dir === "up") dy = -1; if (dir === "down") dy = 1;
-    if (dir === "left") dx = -1; if (dir === "right") dx = 1;
-
-    let nx = player.tileX, ny = player.tileY;
-    const choca = (tx, ty) => map[ty]?.[tx] === 1;
-
-    if (skinColor === "fantasma") {
-        if (choca(nx + dx, ny + dy)) {
-            if (!choca(nx + dx*2, ny + dy*2) && map[ny + dy*2]) { nx += dx*2; ny += dy*2; }
-        } else { while (!choca(nx + dx, ny + dy)) { nx += dx; ny += dy; if(!map[ny+dy]) break; } }
-    } else { while (!choca(nx + dx, ny + dy)) { nx += dx; ny += dy; if(!map[ny+dy]) break; } }
-
-    if (nx !== player.tileX || ny !== player.tileY) { 
-        player.tileX = nx; player.tileY = ny; 
-        player.targetX = nx*gridSize; player.targetY = ny*gridSize; 
-        player.moving = true; 
-    }
-}
-
-// CONTROLES
-window.addEventListener("keydown", e => {
-    if (e.key === "ArrowUp") intentarMover("up"); if (e.key === "ArrowDown") intentarMover("down");
-    if (e.key === "ArrowLeft") intentarMover("left"); if (e.key === "ArrowRight") intentarMover("right");
+document.getElementById('btn-play').addEventListener('click', function() {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('level-selector').style.display = 'flex';
+    renderizarNiveles(); 
+    // Nota: Ya no iniciamos 'new Phaser.Game' aquí. Eso solo debe pasar al tocar un nivel.
 });
 
-let touchStartX = 0, touchStartY = 0;
-canvas.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: false });
-canvas.addEventListener("touchend", e => {
-    let dx = e.changedTouches[0].clientX - touchStartX, dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.abs(dx) > Math.abs(dy)) { if (dx > 30) intentarMover("right"); else if (dx < -30) intentarMover("left"); }
-    else { if (dy > 30) intentarMover("down"); else if (dy < -30) intentarMover("up"); }
-}, { passive: false });
+document.getElementById('btn-reset').addEventListener('click', () => {
+    // 1. Pedir confirmación doble para evitar accidentes
+    const confirmar1 = confirm("¿Estás seguro? Esto borrará TODOS tus puntos, monedas y skins compradas.");
+    
+    if (confirmar1) {
+        const confirmar2 = confirm("¿Sin rencores? Esta acción no se puede deshacer. UDU Studios no podrá recuperar tus datos...");
+        
+        if (confirmar2) {
+            // 2. LIMPIEZA TOTAL DEL ALMACENAMIENTO (LocalStorage)
+            localStorage.removeItem('udu_nivelMax');
+            localStorage.removeItem('udu_monedas');
+            localStorage.removeItem('udu_puntos');
+            localStorage.removeItem('udu_skins');          // <-- Borra la lista de compras
+            localStorage.removeItem('udu_skin_equipada'); // <-- Quita la skin puesta y vuelve a la default
 
-actualizarInterfaz();
-loop();
+            // 3. Reiniciar las variables en el código para esta sesión
+            progreso.nivelMax = 1;
+            progreso.monedas = 0;
+            progreso.puntos = 0;
+
+            // 4. Actualizar los textos de la pantalla del menú
+            document.getElementById('total-points').innerText = "0";
+            
+            alert("¡Listo! Presiona 'Aceptar' para reiniciar para que se vuelva a cargar el sitio web.");
+            
+            // 5. Recargar la página para que el juego lea los valores vacíos
+            location.reload();
+        }
+    }
+});
+
+// --- VARIABLES DE PROGRESO ---
+let progreso = {
+    nivelMax: localStorage.getItem('udu_nivelMax') || 1,
+    monedas: localStorage.getItem('udu_monedas') || 0, // Valor M (Tienda)
+    puntos: localStorage.getItem('udu_puntos') || 0,   // Valor 0 (Puntaje)
+};
+
+document.getElementById('btn-back-main').onclick = () => {
+    // 1. Ocultamos el selector de niveles
+    document.getElementById('level-selector').style.display = 'none';
+    
+    // 2. IMPORTANTE: Mostramos el menú con 'flex' para que respete tu CSS
+    const mainMenu = document.getElementById('main-menu');
+    mainMenu.style.display = 'block';
+    
+    // 3. Opcional: Reseteamos el scroll por si acaso
+    mainMenu.scrollTop = 0;
+};
+
+function renderizarNiveles() {
+    const container = document.getElementById('levels-container');
+    if (!container) return; // Seguridad por si el contenedor no existe
+
+    container.innerHTML = ''; 
+    
+    // Actualizamos el contador de monedas en la UI
+    const coinDisplay = document.getElementById('total-points');
+    if (coinDisplay) coinDisplay.innerText = progreso.puntos;
+
+    // Generamos los 10 niveles
+    for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'level-node';
+        btn.innerText = i; 
+
+        // Lógica de Desbloqueo
+        if (i > progreso.nivelMax) {
+            // NIVEL BLOQUEADO
+            btn.classList.add('level-locked');
+            btn.style.backgroundImage = "url('assets/ui/icon-buttonLevelYellow.png')";
+            btn.disabled = true; // Evita que se pueda hacer clic
+        } else {
+            // NIVEL DISPONIBLE
+            btn.style.backgroundImage = "url('assets/ui/icon-buttonLevelYellow.png')";
+            btn.style.color = '#8800e2'; // Color púrpura para el número sobre fondo amarillo
+            
+            // Efectos visuales (Hover)
+            btn.onmouseover = () => {
+                btn.style.backgroundImage = "url('assets/ui/icon-buttonLevelPurple.png')";
+                btn.style.color = "#ffffff"; 
+            };
+            btn.onmouseout = () => {
+                btn.style.backgroundImage = "url('assets/ui/icon-buttonLevelYellow.png')";
+                btn.style.color = "#8800e2";
+            };
+            
+            // Acción al hacer clic
+            btn.onclick = () => {
+                iniciarJuego(i);
+            };
+        }
+
+        container.appendChild(btn);
+    }
+}
+
+function iniciarJuego(numNivel) {
+    currentLevel = numNivel;
+
+    // 1. Gestión de pantallas
+    document.getElementById('level-selector').style.display = 'none';
+    const contenedorJuego = document.getElementById('game-container');
+    if (contenedorJuego) contenedorJuego.style.display = 'block';
+
+    // 2. Lógica de Phaser
+    if (!game) {
+        // Si es la primera vez, creamos el juego
+        game = new Phaser.Game(config);
+    } else {
+        // Si el juego ya existe, reiniciamos la escena principal
+        // Esto cargará el nuevo currentLevel automáticamente
+        game.scene.scenes[0].scene.restart();
+    }
+}
+
+// ==========================================
+// FUNCIONES DE PHASER
+// ==========================================
+
+function preload() {
+    // 1. CARGA DE MAPAS (Esto se queda igual)
+    for (let i = 1; i <= 10; i++) {
+        let ruta = `niveles/nivel${i}/mapa${i === 1 ? '' : i}.json`;
+        this.load.json(`mapaNivel${i}`, ruta);
+    }
+
+    // 2. CARGA DE ENEMIGOS (Zombies)
+    this.load.image('zombie_idle', 'assets/sprites/enemy-sprites/zombie_idle.png');
+    this.load.image('zombie_up', 'assets/sprites/enemy-sprites/zombie_up.png');
+    this.load.image('zombie_down', 'assets/sprites/enemy-sprites/zombie_down.png');
+    this.load.image('zombie_left', 'assets/sprites/enemy-sprites/zombie_left.png');
+    this.load.image('zombie_right', 'assets/sprites/enemy-sprites/zombie_right.png');
+
+    // 3. LÓGICA DE SKINS PARA EL JUGADOR
+    const skinEquipada = localStorage.getItem('udu_skin_equipada') || 'default';
+    
+    let rutaBase = '';
+    let prefijo = '';
+
+    if (skinEquipada === 'skin_red') {
+        rutaBase = 'assets/sprites/player-sprites/skins_player/skin_red/';
+        prefijo = 'player_';
+    } 
+    else if (skinEquipada === 'skin_blue') {
+        rutaBase = 'assets/sprites/player-sprites/skins_player/skin_blue/';
+        prefijo = 'player_';
+    } 
+    else {
+        // Skin original (Default)
+        rutaBase = 'assets/sprites/player-sprites/';
+        prefijo = 'player_';
+    }
+
+    // 4. CARGA DINÁMICA DE TEXTURAS DEL JUGADOR
+    // Nota: Usamos la misma 'key' (ej: 'player_up') para que el resto del juego funcione igual
+    this.load.image('player_idle',  rutaBase + prefijo + 'idle.png');
+    this.load.image('player_up',    rutaBase + prefijo + 'up.png');
+    this.load.image('player_down',  rutaBase + prefijo + 'down.png');
+    this.load.image('player_left',  rutaBase + prefijo + 'left.png');
+    this.load.image('player_right', rutaBase + prefijo + 'right.png');
+}
+
+function create() {
+    const claveMapa = `mapaNivel${currentLevel}`;
+    const datosNivel = this.cache.json.get(claveMapa);
+    
+    // SEGURIDAD: Si el mapa no existe, avisamos y no seguimos
+    if (!datosNivel || !datosNivel.mapa) {
+        console.error("¡Ups!, ¡Error nuestro! No se encontró el laberinto en: " + claveMapa);
+        alert("El archivo niveles/nivel" + (currentLevel === 1 ? "" : currentLevel) + ".json no se encontró o no existe aún :(. Vuelve a intentarlo más tarde");
+        location.reload(); 
+    }
+    
+    const mapaRaw = datosNivel.mapa;
+    const tileSize = 24;
+
+    this.muros = this.physics.add.staticGroup();
+    this.portales = this.physics.add.staticGroup();
+    this.monedas = this.physics.add.group();
+    this.puntos = this.physics.add.group();
+    this.zombies = this.physics.add.group();
+    this.score = 0; // Inicializamos el puntaje
+
+    // --- 1. DIBUJAR EL MAPA (Muros y Puntos) ---
+    mapaRaw.forEach((filaString, y) => {
+        const fila = filaString.split(','); 
+        fila.forEach((valor, x) => {
+            let posX = x * tileSize + tileSize/2;
+            let posY = y * tileSize + tileSize/2;
+
+            if (valor === "1") {
+                let muro = this.add.rectangle(posX, posY, tileSize, tileSize, 0x4a0080);
+                this.muros.add(muro);
+            } else if (valor === "0") {
+                let punto = this.add.circle(posX, posY, 4, 0xffff00);
+                this.puntos.add(punto);
+            } else if (valor === "o") {
+            } else if (valor === "Z") {
+                crearPatrullero(this, posX, posY, 100); 
+            } else if (valor === "m") {
+                let moneda = this.add.circle(posX, posY, 6, 0xffb300);
+                this.monedas.add(moneda);
+            } else if (valor === "S") {
+                let portal = this.add.rectangle(posX, posY, tileSize, tileSize, 0x00ffff);
+                this.portales.add(portal); 
+    
+            // Animación de brillo (opcional pero se ve genial)
+            this.tweens.add({
+                targets: portal,
+                alpha: 0.5,
+                duration: 500,
+                yoyo: true,
+                repeat: -1
+            });
+          };
+        });
+     });
+
+    // Calculamos el ancho y alto real del mapa basado en tu array
+    const mapaAncho = datosNivel.mapa[0].split(',').length * tileSize;
+    const mapaAlto = datosNivel.mapa.length * tileSize;
+ 
+    // Le decimos a la física y a la cámara cuáles son los límites del mundo  
+    this.physics.world.setBounds(0, 0, mapaAncho, mapaAlto);
+    this.cameras.main.setBounds(0, 0, mapaAncho, mapaAlto);
+
+    // --- 2. CREAR AL JUGADOR ---
+this.player = this.physics.add.sprite(36, 36, 'player_idle'); 
+
+// 1. ESCALA GRANDE
+this.player.setScale(1); 
+
+// 2. EL TRUCO: Hitbox minúsculo en el centro
+// Hacemos que la zona de choque sea de solo 40x40 píxeles.
+// Esto es mucho más pequeño que los pasillos, así que NUNCA se trabará.
+this.player.body.setSize(22, 22); 
+
+// 3. CENTRADO PERFECTO:
+// Esta fórmula pone el cuadro morado exactamente en el centro del dibujo grande.
+this.player.body.setOffset(
+    (this.player.width - this.player.body.width) / 2,
+    (this.player.height - this.player.body.height) / 2
+);
+
+// La cámara sigue al jugador
+// true: redondea píxeles para que no se vea borroso
+// 0.1, 0.1: es el "lerp" (el retraso suave que querías)
+this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
+const miZoom = 1.5;
+this.cameras.main.setZoom(miZoom);
+
+this.player.setCollideWorldBounds(true);
+this.cameras.main.setRoundPixels(true);
+
+    // --- 4. COLISIONES DEL JUGADOR ---
+    this.physics.add.collider(this.player, this.muros);
+    this.physics.add.collider(this.zombies, this.muros);
+
+    this.physics.add.overlap(this.player, this.zombies, () => {
+        alert("¡Un zombie te atrapó!");
+        this.scene.restart();
+    }, null, this);
+
+    this.physics.add.overlap(this.player, this.puntos, (player, punto) => { punto.destroy();
+    
+    // 1. Sumar al progreso global (el que se guarda)
+    progreso.puntos = parseInt(progreso.puntos) + 1;
+    
+    // 2. Guardar en el navegador para que no se pierda
+    localStorage.setItem('udu_puntos', progreso.puntos);
+    
+    // 3. Actualizar los DOS textos: el de la pantalla y el del menú
+    this.scoreText.setText('Puntos: ' + progreso.puntos);
+    document.getElementById('total-points').innerText = progreso.puntos;
+    
+    console.log("Puntos totales guardados:", progreso.puntos);
+    }, null, this);
+    
+    this.physics.add.overlap(this.player, this.monedas, (player, monedas) => { monedas.destroy();
+    
+    // 1. Sumar al progreso global (el que se guarda)
+    progreso.monedas = parseInt(progreso.monedas) + 1;
+    
+    // 2. Guardar en el navegador para que no se pierda
+    localStorage.setItem('udu_monedas', progreso.monedas);
+    
+    // 3. Actualizar los DOS textos: el de la pantalla y el del menú
+    this.textoMonedas.setText('Monedas: ' + progreso.monedas);
+    
+    console.log("Monedas totales recogidas:", progreso.monedas);
+    }, null, this);
+
+    this.physics.add.overlap(this.player, this.portales, () => {
+    // 1. Si pasamos el nivel más alto que teníamos, desbloqueamos el siguiente
+    if (currentLevel === parseInt(progreso.nivelMax)) {
+        progreso.nivelMax++;
+        localStorage.setItem('udu_nivelMax', progreso.nivelMax);
+    }
+
+    // 2. Mensaje de victoria
+    alert("¡Nivel completado!");
+
+    // 3. Regresar al selector de niveles
+    this.scene.stop(); // Reinicia Phaser para el próximo nivel
+    document.getElementById('level-selector').style.display = 'flex';
+    renderizarNiveles(); // Actualiza los botones (para que el nuevo nivel ya no sea gris)
+    }, null, this);
+
+    // Detectar deslizamiento en pantalla táctil
+    this.input.on('pointerup', (pointer) => {
+    const swipeThreshold = 50; // Distancia mínima para detectar el deslizamiento
+    const distX = pointer.upX - pointer.downX;
+    const distY = pointer.upY - pointer.downY;
+
+    // Solo se mueve si el personaje está quieto
+    if (this.player.body.velocity.x === 0 && this.player.body.velocity.y === 0) {
+        if (Math.abs(distX) > Math.abs(distY)) {
+            if (Math.abs(distX) > swipeThreshold) {
+                if (distX > 0) this.player.body.setVelocityX(400); // Derecha
+                else this.player.body.setVelocityX(-400); // Izquierda
+            }
+        } else {
+            if (Math.abs(distY) > swipeThreshold) {
+                if (distY > 0) this.player.body.setVelocityY(400); // Abajo
+                else this.player.body.setVelocityY(-400); // Arriba
+            }
+        }
+    }
+});
+    this.cursors = this.input.keyboard.createCursorKeys();
+
+    // Texto para el puntaje en la esquina (x: 10, y: 10)
+    this.scoreText = this.add.text(59, 105, 'Puntos: ' + progreso.puntos, {
+    fontSize: '18px',
+    fill: '#ffffff',
+    fontFamily: 'Arial',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: { x: 5, y: 5 }
+    });
+    this.scoreText.setScrollFactor(0); // Para que el texto no se mueva si la cámara se mueve
+    this.scoreText.setDepth(100);     // Para que siempre esté encima de todo
+    this.scoreText.setScale(1 / miZoom);
+
+    this.textoMonedas = this.add.text(59, 120, 'Monedas: ' + progreso.monedas, {
+        fontSize: '18px',
+        fill: '#ffffff',
+        fontFamily: 'Arial',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        padding: { x: 5, y: 5 },
+    });
+    this.textoMonedas.setScrollFactor(0); // Para que el texto no se mueva si la cámara se mueve
+    this.textoMonedas.setDepth(100);     // Para que siempre esté encima de todo
+    this.textoMonedas.setScale(1 / miZoom);
+
+    // --- BOTÓN DE ABANDONAR (DENTRO DEL JUEGO) ---
+    this.btnAbandonar = this.add.text(300, 105, '✕ ABANDONAR', {
+        fontSize: '16px',
+        fill: '#ff4d4d',
+        fontFamily: 'Arial',
+        fontWeight: 'bold',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: { x: 8, y: 5 }
+    });
+
+    // Lo fijamos a la cámara y lo ponemos a la derecha
+    this.btnAbandonar.setScrollFactor(0).setDepth(100).setOrigin(1, 0);
+    this.btnAbandonar.setInteractive({ useHandCursor: true });
+    this.btnAbandonar.setScale(1 / miZoom);
+
+    // Efectos visuales al pasar el mouse
+    this.btnAbandonar.on('pointerover', () => {
+        this.btnAbandonar.setStyle({ fill: '#ffffff', backgroundColor: '#ff0000' });
+    });
+    this.btnAbandonar.on('pointerout', () => {
+        this.btnAbandonar.setStyle({ fill: '#ff4d4d', backgroundColor: 'rgba(0,0,0,0.6)' });
+    });
+
+    // Acción al hacer clic
+    this.btnAbandonar.on('pointerdown', () => {
+        if (confirm("¿Seguro que quieres abandonar? No se guardará el progreso.")) {
+            // Regresamos al selector de niveles sin guardar progreso extra
+            this.scene.stop();
+            document.getElementById('level-selector').style.display = 'flex';
+            renderizarNiveles();
+        }
+    });
+}
+    
+function update() {
+    if (!this.player || !this.player.body || !this.cursors) return;
+
+    // Frenar si golpea pared
+    if (this.player.body.blocked.up || this.player.body.blocked.down) this.player.body.setVelocityY(0);
+    if (this.player.body.blocked.left || this.player.body.blocked.right) this.player.body.setVelocityX(0);
+
+    // Movimiento Estilo Tomb of the Mask
+    if (this.player.body.velocity.x === 0 && this.player.body.velocity.y === 0) {
+        this.player.setTexture('player_idle');
+        if (this.cursors.left.isDown) this.player.body.setVelocityX(-400);
+        else if (this.cursors.right.isDown) this.player.body.setVelocityX(400);
+        else if (this.cursors.up.isDown) this.player.body.setVelocityY(-400);
+        else if (this.cursors.down.isDown) this.player.body.setVelocityY(400);
+    } else {
+        if (this.player.body.velocity.x < 0) this.player.setTexture('player_left');
+        else if (this.player.body.velocity.x > 0) this.player.setTexture('player_right');
+        else if (this.player.body.velocity.y < 0) this.player.setTexture('player_up');
+        else if (this.player.body.velocity.y > 0) this.player.setTexture('player_down');
+    }
+}
+
+// --- ESTA FUNCIÓN VA AL FINAL DE TODO TU ARCHIVO ---
+function crearPatrullero(escena, x, y) {
+    // 1. Verificamos si la imagen del zombie existe para que no se congele el juego
+    let imagenZ = escena.textures.exists('zombie_idle') ? 'zombie_idle' : null;
+    let zombie;
+
+    if (imagenZ) {
+        // Si la imagen cargó bien (el zombie vive)
+        zombie = escena.zombies.create(x, y, 'zombie_idle');
+    } else {
+        // Si hay error 404, creamos un zombie de emergencia (cuadrado verde)
+        console.warn("⚠️ UDU Studios Alert: 'zombie_idle' no encontrado. Usando zombie de emergencia.");
+        zombie = escena.add.rectangle(x, y, 24, 24, 0x00ff00);
+        escena.physics.add.existing(zombie); // Le damos física para que pueda chocar
+        escena.zombies.add(zombie); // Lo unimos al grupo de enemigos
+    }
+    
+    // 2. Configuración física del zombie
+    zombie.setDepth(10);
+    zombie.body.setCollideWorldBounds(true);
+    zombie.body.setBounce(1, 0); // Rebota al chocar con paredes
+    zombie.body.setVelocityX(150); // Empieza caminando a la derecha
+}
